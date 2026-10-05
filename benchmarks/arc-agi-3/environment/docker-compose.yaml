@@ -1,0 +1,40 @@
+services:
+  main:
+    depends_on:
+      arc-server:
+        condition: service_healthy
+    environment:
+      ARCCTL_HOST: arc-server
+      ARCCTL_PORT: "8765"
+
+  arc-server:
+    build:
+      context: ${CONTEXT_DIR}
+      dockerfile: Dockerfile.arc-server
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p "$$ARCCTL_STATE_DIR"
+        exec python3 /usr/local/bin/arc_server.py server >> "$$ARCCTL_STATE_DIR/arcctl-server.log" 2>&1
+    expose:
+      - "8765"
+    environment:
+      ARCCTL_HOST: 0.0.0.0
+      ARCCTL_PORT: "8765"
+      ARCCTL_STATE_DIR: /logs/agent/arc_agi3_runs
+      ARCCTL_DEFAULT_GAME: ${ARCCTL_DEFAULT_GAME:-ls20}
+      ARCCTL_ACTION_BUDGET_MULTIPLIER: ${ARCCTL_ACTION_BUDGET_MULTIPLIER:-5.0}
+      ARCCTL_FALLBACK_MAX_ACTIONS: ${ARCCTL_FALLBACK_MAX_ACTIONS:-10}
+      ARCCTL_FIXED_LEVEL_BUDGET: ${ARCCTL_FIXED_LEVEL_BUDGET:-}
+      ARCCTL_TARGET_LEVELS: ${ARCCTL_TARGET_LEVELS:-0}
+      ARCCTL_SYNC_FREQ: ${ARCCTL_SYNC_FREQ:-0}
+    healthcheck:
+      test: ["CMD-SHELL", "ARCCTL_HOST=127.0.0.1 arcctl ping >/dev/null"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - type: bind
+        source: ${HOST_AGENT_LOGS_PATH:?HOST_AGENT_LOGS_PATH is required}
+        target: ${ENV_AGENT_LOGS_PATH:?ENV_AGENT_LOGS_PATH is required}

@@ -1,0 +1,15 @@
+services:
+  main:
+    shm_size: "8gb"
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      NVIDIA_VISIBLE_DEVICES: all
+      MNISTBOARD_GPU_MEMORY_LIMIT_MIB: "1000"
+      MNISTBOARD_GPU_ALLOCATOR_MIB: "400"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

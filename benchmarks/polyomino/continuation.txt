@@ -1,0 +1,10 @@
+ENVIRONMENT FEEDBACK: Your turn ended, but this task is NOT finished and you still have many HOURS of compute budget remaining. Do not stop and do not conclude - treat this as a long-running optimization effort and keep going.
+
+Your best submitted solution so far is already saved and safe. Your job now is to BEAT it. Hitting a plateau is not a reason to stop; it is a signal to try a structurally DIFFERENT approach.
+
+Take another turn now. Do not answer only in prose - use tool calls (bash):
+  - Re-read statement.txt and AGENT.md and your current /app/solution.cpp, and recall your best score so far.
+  - Try a fundamentally different algorithm or strategy than the ones you have already tried, for example: a different problem/search formulation, a stronger metaheuristic (simulated annealing, tabu search, large-neighborhood search), an exact or ILP / branch-and-bound core, better constructive heuristics, smarter neighborhood moves, randomized restarts, or systematic parameter tuning.
+  - Edit /app/solution.cpp and run `bash /app/submit.sh` to get a fresh graded score. Submit early and often; every improvement over your best counts.
+
+Keep iterating and keep submitting for as long as you can make progress. Only stop if you have genuinely exhausted clearly distinct approaches. Continue working now.

@@ -1,0 +1,3 @@
+ENVIRONMENT FEEDBACK: Your previous turn did not produce any valid ARC action, so the environment recorded no progress for your session.
+
+Take another turn now. Do not answer only in prose. Use a valid tool call, preferably bash, inspect the ARC environment with arcctl observe/actions if needed, and execute a valid ARC action with arcctl step <action_id>.

@@ -1,0 +1,37 @@
+services:
+  main:
+    # Harbor builds explicitly before starting services.
+    pull_policy: never
+    depends_on:
+      judge:
+        condition: service_started
+    environment:
+      PROBLEM_ID: "0"
+      JUDGE_URL: "http://judge:8081"
+    volumes:
+      - ./AGENT.md:/app/AGENT.md:ro
+      - ./submit.sh:/app/submit.sh:ro
+      - ./submit.py:/app/submit.py:ro
+      - ./statement.txt:/app/statement.txt:ro
+      - ./config.yaml:/app/config.yaml:ro
+
+  judge:
+    build:
+      context: ${CONTEXT_DIR}
+      dockerfile: Dockerfile.judge
+    privileged: true
+    shm_size: "4g"
+    ulimits:
+      stack:
+        soft: -1
+        hard: -1
+    environment:
+      PORT: "8081"
+      GJ_ADDR: "http://127.0.0.1:5050"
+      JUDGE_WORKERS: "8"
+      GJ_PARALLELISM: "8"
+      SAVE_OUTPUTS: "false"
+    volumes:
+      - ${POLYOMINO_DATA:?prepare problem 0 first}:/app/problems/0:ro
+      - /app/submissions
+      - /app/data

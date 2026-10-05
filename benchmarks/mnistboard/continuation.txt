@@ -1,0 +1,15 @@
+ENVIRONMENT FEEDBACK: Your turn ended, but this task is NOT finished and you still have many HOURS of compute budget left. Do not stop and do not write a concluding summary - this is a long-running optimisation effort, so keep going.
+
+Whatever is in /app/submission right now is already saved and safe. Your job from here is to BEAT it. Reaching 99.4% accuracy is the gate; above it, the score is driven ONLY by the deterministic gzip size of the complete solver, and every byte you remove raises it. Inference code, weights, tables, and decompression logic under /app/submission all count.
+
+Take another turn now, and act with tool calls (bash) rather than replying in prose:
+  - Run `bash /app/score.sh` to re-read the exact current model_bytes.
+  - Train on all 55,000 examples in `/data/train.npz`. Use `/data/val.npz` as the 5,000-image development set for evaluation, tuning, and model selection; do not include validation examples in gradient updates or teacher training.
+  - Save every new smallest full-validation checkpoint with `qualified_on_val: true`; both checkpoint qualification and sealed-test eligibility use the 99.4% validation gate. `check_test.py` returns aggregate test accuracy.
+  - Recall your best result so far, then try a structurally DIFFERENT way to shrink it rather than another small variation: fewer/narrower layers, a smaller effective input (pooling, cropping, learned projection), aggressive quantisation (int4, ternary, binary), weight sharing or a codebook, low-rank/separable factorisation, pruning to a sparse subset, distillation from a larger train-only teacher, or entropy-coding weights with a compact decoder.
+  - Count code and data together. Move complexity between inference code, generated structure, and stored weights only when the complete solver becomes smaller after deterministic gzip.
+  - Use the shared A100 for training or inference when helpful, but keep total CUDA memory under 1,000 MiB. Apply the exported 400 MiB PyTorch allocator recommendation once per CUDA process.
+  - Append each distinct intervention and its measured result to IDEAS.md outside /app/submission.
+  - Retrain, re-check, and overwrite /app/submission whenever you have something better. Keep the best version there at all times.
+
+A plateau is not a reason to stop; it is a signal to change approach. Only stop if you have genuinely exhausted clearly distinct ideas. Continue working now.

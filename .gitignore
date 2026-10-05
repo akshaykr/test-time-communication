@@ -1,0 +1,9 @@
+.venv/
+.cache/
+__pycache__/
+.pytest_cache/
+*.pyc
+jobs/
+benchmarks/mnistboard/environment/mnist-raw/
+benchmarks/mnistboard/tests/mnist_test.npz
+.DS_Store
