@@ -6,7 +6,8 @@ graded judge. Each call:
 
 1. Writes a `started` record to /logs/agent/submissions.jsonl (so we know the
    call existed even if everything downstream fails).
-2. POSTs /app/solution.cpp (or the first arg) to the judge sidecar.
+2. Archives the source under /logs/agent/submitted_sources/<submission_uuid>.cpp,
+   records its SHA-256, then POSTs those same bytes to the judge sidecar.
 3. Polls until the judge returns done/error.
 4. Writes a `done`/`error` record with the same submission_uuid, then prints
    a concise score + feedback summary so the agent sees it on stdout.
@@ -16,13 +17,14 @@ Exit code semantics:
 - 2: solution file missing / empty.
 - 3: judge submit request failed.
 - 4: judge polling timed out.
-- 5: unexpected runtime error.
+- 5: source archiving failed or unexpected runtime error.
 
 The post-hoc analysis joins submissions.jsonl with the agent's trajectory
 file by ordinal to attach tokens_so_far. See ../../../../../analysis/.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -81,11 +83,16 @@ def _compact(result):
 def main() -> int:
     solution_path = Path(sys.argv[1] if len(sys.argv) > 1 else "/app/solution.cpp")
     sub_uuid = str(uuid.uuid4())
+    source_archive = SUBMISSIONS_LOG.parent / "submitted_sources" / f"{sub_uuid}.cpp"
+    submission_info = {
+        "submission_uuid": sub_uuid,
+        "source_archive": str(source_archive.relative_to(SUBMISSIONS_LOG.parent)),
+    }
     code_chars = 0
 
     log_record(
         {
-            "submission_uuid": sub_uuid,
+            **submission_info,
             "ts": now_iso(),
             "status": "started",
             "problem_id": PROBLEM_ID,
@@ -99,7 +106,7 @@ def main() -> int:
         print(f"[submit] ERROR: {msg}", file=sys.stderr)
         log_record(
             {
-                "submission_uuid": sub_uuid,
+                **submission_info,
                 "ts": now_iso(),
                 "status": "error",
                 "error": msg,
@@ -107,14 +114,14 @@ def main() -> int:
         )
         return 2
 
-    code = solution_path.read_text()
-    code_chars = len(code)
+    code = solution_path.read_bytes()
+    code_chars = len(code.decode("utf-8"))
     if not code.strip():
         msg = f"Solution file {solution_path} is empty"
         print(f"[submit] ERROR: {msg}", file=sys.stderr)
         log_record(
             {
-                "submission_uuid": sub_uuid,
+                **submission_info,
                 "ts": now_iso(),
                 "status": "error",
                 "error": msg,
@@ -122,6 +129,26 @@ def main() -> int:
             }
         )
         return 2
+
+    try:
+        source_archive.parent.mkdir(parents=True, exist_ok=True)
+        source_archive.write_bytes(code)
+    except OSError as exc:
+        msg = f"Source archiving failed: {exc}"
+        print(f"[submit] ERROR: {msg}", file=sys.stderr)
+        log_record({**submission_info, "ts": now_iso(), "status": "error", "error": msg})
+        return 5
+
+    submission_info["source_sha256"] = hashlib.sha256(code).hexdigest()
+    log_record(
+        {
+            **submission_info,
+            "ts": now_iso(),
+            "status": "archived",
+            "solution_path": str(solution_path),
+            "code_chars": code_chars,
+        }
+    )
 
     try:
         r = requests.post(
@@ -137,7 +164,7 @@ def main() -> int:
         print(f"[submit] ERROR: {msg}", file=sys.stderr)
         log_record(
             {
-                "submission_uuid": sub_uuid,
+                **submission_info,
                 "ts": now_iso(),
                 "status": "error",
                 "error": msg,
@@ -166,7 +193,7 @@ def main() -> int:
         print(f"[submit] ERROR: {msg}", file=sys.stderr)
         log_record(
             {
-                "submission_uuid": sub_uuid,
+                **submission_info,
                 "ts": now_iso(),
                 "status": "error",
                 "sid": sid,
@@ -185,7 +212,7 @@ def main() -> int:
 
     log_record(
         {
-            "submission_uuid": sub_uuid,
+            **submission_info,
             "ts": now_iso(),
             "status": status,
             "sid": sid,

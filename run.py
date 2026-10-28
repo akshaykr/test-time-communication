@@ -97,10 +97,12 @@ def prepare(args: argparse.Namespace) -> tuple[list[str], dict[str, str], Path]:
         if binary.name != "copilot" or signature != b"\x7fELF":
             raise ValueError("--copilot-binary must point to the standalone Linux copilot executable")
     token_file = Path.home() / ".copilot/pat"
+    if not env.get("COPILOT_GITHUB_TOKEN") and env.get("GH_TOKEN"):
+        env["COPILOT_GITHUB_TOKEN"] = env["GH_TOKEN"]
     if not env.get("COPILOT_GITHUB_TOKEN") and token_file.is_file():
         env["COPILOT_GITHUB_TOKEN"] = token_file.read_text().strip()
     if not env.get("COPILOT_GITHUB_TOKEN") and not args.dry_run:
-        raise ValueError("set COPILOT_GITHUB_TOKEN to a PAT with Copilot Requests permission")
+        raise ValueError("set COPILOT_GITHUB_TOKEN or GH_TOKEN to a PAT with Copilot Requests permission")
     mounts.append({"type": "bind", "source": str(binary.parent),
                    "target": "/mnt/release-copilot", "read_only": True,
                    "bind": {"create_host_path": False}})

@@ -107,9 +107,15 @@ COPILOT_API_RETRY_PATTERN='(api_error_status.?40(1|9)|status.?code.?40(1|9)|http
 
 configure_copilot_command() {
   copilot_command=("$copilot_binary")
+  local copilot_help
+  copilot_help=$("$copilot_binary" --no-auto-update --help) || return $?
+  effort_option="--effort"
+  if grep -Eq '^[[:space:]]*--reasoning-effort([[:space:]]|=|$)' <<< "$copilot_help"; then
+    effort_option="--reasoning-effort"
+  fi
   context_flag=""
   if [ "${RELEASE_LONG_CONTEXT:-1}" = "1" ] && \
-     "$copilot_binary" --no-auto-update --help 2>/dev/null | grep -Eq '^[[:space:]]*--context([[:space:]]|=|$)'; then
+     grep -Eq '^[[:space:]]*--context([[:space:]]|=|$)' <<< "$copilot_help"; then
     context_flag="--context long_context"
   fi
 }
@@ -343,11 +349,11 @@ append_copilot_api_retry_exhausted_event() {
             "  shift 3\n"
         )
         agent_effort = os.environ.get("MULTIAGENT_AGENT_EFFORT", "").strip()
-        # Apply --effort only to models that support it: Haiku rejects reasoning-effort
+        # Apply effort only to models that support it: Haiku rejects reasoning-effort
         # configuration, so skip it for haiku models.
         if agent_effort:
-            _eff = shlex.quote("--effort " + agent_effort)
-            effort_flag = f'$(case "$model" in auto|*haiku*) ;; *) printf %s {_eff} ;; esac) '
+            _eff = shlex.quote(agent_effort)
+            effort_flag = f'$(case "$model" in auto|*haiku*) ;; *) printf "%s %s" "$effort_option" {_eff} ;; esac) '
         else:
             effort_flag = ""
         context_flag = "$context_flag "
@@ -653,11 +659,11 @@ class CopilotSingleAgent(CopilotAgent):
         )
 
         agent_effort = os.environ.get("MULTIAGENT_AGENT_EFFORT", "").strip()
-        # Apply --effort only to models that support it (Haiku rejects it); evaluated
+        # Apply effort only to models that support it (Haiku rejects it); evaluated
         # at runtime against $model.
         if agent_effort:
-            _eff = shlex.quote("--effort " + agent_effort)
-            effort_flag = f'$(case "$model" in auto|*haiku*) ;; *) printf %s {_eff} ;; esac) '
+            _eff = shlex.quote(agent_effort)
+            effort_flag = f'$(case "$model" in auto|*haiku*) ;; *) printf "%s %s" "$effort_option" {_eff} ;; esac) '
         else:
             effort_flag = ""
         context_flag = "$context_flag "

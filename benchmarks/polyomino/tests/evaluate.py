@@ -20,12 +20,13 @@ REWARD_JSON = Path("/logs/verifier/reward.json")
 AGENT_SUBMISSIONS_LOG = Path("/logs/agent/submissions.jsonl")
 VERIFIER_SUBMISSIONS_LOG = Path("/logs/verifier/submissions.jsonl")
 JUDGE_RESULT_JSON = Path("/logs/verifier/judge_result.json")
+FINAL_SOURCE_ARCHIVE = Path("/logs/verifier/final_solution.cpp")
 POLL_INTERVAL = 2  # seconds
 MAX_POLL_TIME = int(os.environ.get("MAX_POLL_TIME", "600"))  # seconds
 
 
 def copy_submissions_log() -> None:
-    """Mirror the agent's in-trace submissions log into verifier artifacts.
+    """Mirror the agent's submission history and sources into verifier artifacts.
 
     The verifier dir is always present in the trial output; copying the log
     here means the post-hoc analysis only has to look in one place even if
@@ -35,8 +36,15 @@ def copy_submissions_log() -> None:
         VERIFIER_SUBMISSIONS_LOG.parent.mkdir(parents=True, exist_ok=True)
         try:
             shutil.copy2(AGENT_SUBMISSIONS_LOG, VERIFIER_SUBMISSIONS_LOG)
+            sources = AGENT_SUBMISSIONS_LOG.parent / "submitted_sources"
+            if sources.exists():
+                shutil.copytree(
+                    sources,
+                    VERIFIER_SUBMISSIONS_LOG.parent / "submitted_sources",
+                    dirs_exist_ok=True,
+                )
         except OSError as exc:
-            print(f"WARN: failed to copy submissions.jsonl: {exc}")
+            print(f"WARN: failed to copy submission history or sources: {exc}")
 
 
 def best_submission() -> dict | None:
@@ -136,13 +144,16 @@ def main():
         write_reward(0.0, "solution.cpp not found")
         return
 
-    code = SOLUTION_PATH.read_text()
+    code = SOLUTION_PATH.read_bytes()
     if not code.strip():
         print("ERROR: solution.cpp is empty")
         if write_best_submission_reward("solution.cpp is empty"):
             return
         write_reward(0.0, "solution.cpp is empty")
         return
+
+    FINAL_SOURCE_ARCHIVE.parent.mkdir(parents=True, exist_ok=True)
+    FINAL_SOURCE_ARCHIVE.write_bytes(code)
 
     # 2. Wait for judge availability (may take time to start)
     print("Waiting for judge...")

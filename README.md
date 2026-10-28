@@ -45,8 +45,11 @@ install_copilot() {
 export COPILOT_GITHUB_TOKEN=your_copilot_pat
 ```
 
-The PAT needs Copilot Requests permission. Alternatively, store it in
-`~/.copilot/pat` with mode 600. On macOS, download the Linux binary matching
+The PAT needs Copilot Requests permission. The launcher checks
+`COPILOT_GITHUB_TOKEN`, then `GH_TOKEN`, then `~/.copilot/pat` (use mode 600).
+It passes the selected token as `COPILOT_GITHUB_TOKEN` and removes `GH_TOKEN`
+and `GITHUB_TOKEN` from the child environment.
+On macOS, download the Linux binary matching
 Docker's container architecture; it runs inside the container.
 
 Replace model identifiers below with those available to your account.
@@ -111,6 +114,14 @@ Each agent defaults to 1,000 continuation attempts if it concludes before the ti
 Each container shares 2 CPUs and 6 GiB.
 The judge requires a privileged Linux container and grades 70 cases with a
 2-second time limit and 256 MiB per case.
+
+Every iterative submission archives the exact source sent to the judge under
+`jobs/<job>/<trial>/agent/submitted_sources/<submission_uuid>.cpp` before the
+request, including submissions that later fail or time out. Records in
+`agent/submissions.jsonl` link the UUID, original path, archive path (relative to
+that log), SHA-256, and grading outcome. The verifier mirrors this history and
+the sources under `verifier/`; its final candidate is saved separately as
+`verifier/final_solution.cpp`. These files survive container cleanup.
 
 ## MNIST compression
 
